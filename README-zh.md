@@ -88,10 +88,12 @@ sudo python3 goodix_spi_driver.py full_test
 
 ## 当前瓶颈
 
-MCU 在所有 SPI 命令上返回 0xFF。可能原因：
-- **无供电** — 电源由 EC 控制，GPIO/ACPI 无法开启
-- **无固件** — 需要 J-Link/SWD（GR5515 ROM bootloader 仅 BLE）
-- **协议错误** — 需要从 Windows 系统捕获真实 SPI 序列
+MCU 所有 SPI 命令返回 0xFF，已确认原因：
+
+1. **GR5515 ROM Bootloader 仅支持 BLE DFU，不监听 SPI** — 空白/损坏芯片无法通过 SPI 恢复
+2. **传感器未上电** — 电源由嵌入式控制器（EC）通过 ACPI 管理，Linux 没有对应驱动，GPIO/ACPI `_INI` 均无法供电
+
+两种原因可能同时存在。无论哪种，纯软件方案已到尽头。
 
 ## 突破方案
 

@@ -97,10 +97,12 @@ Host (Linux)                               Sensor (GR5515)
 
 ## Blocked On
 
-MCU returns 0xFF on all SPI commands. Either:
-- **No power** — EC-controlled, GPIO/ACPI insufficient
-- **No firmware** — needs J-Link/SWD (GR5515 ROM bootloader is BLE-only)
-- **Wrong protocol** — requires SPI capture from working Windows system
+MCU returns 0xFF on all SPI commands. Two confirmed reasons:
+
+1. **GR5515 ROM Bootloader is BLE-only — does not listen on SPI.** If firmware is missing or corrupted, the chip enters BLE DFU mode. The sensor module has no antenna, making over-the-air recovery impossible without J-Link/SWD.
+2. **Sensor not powered.** Power is controlled by the Embedded Controller (EC) via ACPI. Linux has no GXFP51A0 driver to trigger the power sequence. GPIO and `_INI` calls do not enable it.
+
+Both may be true simultaneously. Either way, pure software cannot proceed further.
 
 ## Path Forward
 

@@ -635,7 +635,38 @@ Device (FPNT) at \_SB_.PCI0.SPI1.FPNT
     SHPO(GFPS, One) — 设置复位 GPIO 为高
 ```
 
-### 11.3 SPI 通信行为
+### 11.3 SPI 通信协议
+
+发现三种不同的 SPI 协议层：
+
+#### IHA 协议（Intel 封装层）
+在 iha64.dll / JHI64.dll 层使用，Magic = `0x00010000`：
+```
+[4B Magic 0x00010000] [2B Cmd] [2B Len] [4B Op] [2B Mode] [2B RespSize] [2B DataSize] [Data]
+Cmd: 0x19=SendRecv  0x07=Send  0x09=Recv
+Byte Order: Big-Endian (网络字节序)
+```
+
+#### 社区直连 SPI 协议
+goodix-fp-dump 项目发现，直接操作 MCU 时使用：
+```
+主机帧: cc f2 [seq] 82 — a0 [len_lo len_hi] [cksum] — ae [len_lo len_hi] [data] [cksum] — 00 00
+主机 RTR: bb f1 00 00
+从机响应: a0 [len] [cksum] — ae [len] [data] [cksum]
+命令: ENABLE_CHIP(0x96) RESET(0xa2) FIRMWARE_VERSION(0xa8) QUERY_MCU_STATE(0xae)
+```
+
+#### GR5515 DFU 协议
+Goodix 官方 DFU 协议，Magic = `0x4744` ('GD')：
+```
+帧: 47 44 [type 2B LE] [len 2B LE] [data 0-2048B] [cksum 2B LE]
+命令: 0x0023=ProgramStart  0x0024=ProgramFlash  0x0025=ProgramEnd
+      0x002A=ConfigExtFlash  0x002B=GetFlashInfo
+校验: 16-bit sum over [type + len + data]
+注意: 此协议需要固件先运行；仅支持 BLE/UART，不支持裸芯片 SPI
+```
+
+### 11.4 SPI 通信行为
 
 | 阶段 | 发送 | MISO 响应 | 说明 |
 |------|------|-----------|------|
@@ -663,13 +694,19 @@ Device (FPNT) at \_SB_.PCI0.SPI1.FPNT
 - 可能是指纹模板索引、校准数据哈希表或算法参数表
 - 所有 8 字节哈希值都以 `0x70` 开头，疑似特定哈希算法输出
 
-### 11.6 关键发现总结
+### 11.6 SPI 测试结果
 
-1. **SPI 通信可行** — Mode 0, 10 MHz, 设备有响应
-2. **MCU Applet 关键** — 没有 firmware applet，MCU 无法正常通信
-3. **Applet 不在 DLL 中** — 驱动从文件系统加载 applet 文件
-4. **Reset GPIO 未找到** — 需要在 36 个输出 GPIO 中定位复位引脚
-5. **ACPI 固件表** — HWFP 区域含 2KB 指纹配置数据，可通过 _DSM 读取
+三种协议均测试完毕：
+
+| 协议 | Magic | 命令 | Tested | 结果 |
+|------|-------|------|:-----:|------|
+| IHA | 0x00010000 BE | 0x19/0x07/0x09 | ✅ | 全 0xFF |
+| 社区直连 | 0xccf2 + 0xa0 + 0xae | 0xae/0xa8/0x96 | ✅ | 全 0xFF |
+| GR5515 DFU | 0x4744 LE | 0x002B/0x0023 | ✅ | 全 0xFF |
+| STM32 bootloader | 0x7F/0x5A | — | ✅ | 全 0xFF |
+| JEDEC/Flash ID | 0x90/0x9F | — | ✅ | 全 0xFF |
+
+**结论**: MCU 完全不驱动 MISO。GR5515 ROM Bootloader 仅支持 BLE DFU，不监听 SPI。
 
 ### 11.7 GPIO Reset 测试结果
 

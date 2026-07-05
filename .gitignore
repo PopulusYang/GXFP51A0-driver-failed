@@ -1,0 +1,45 @@
+# Binaries
+*.dll
+*.exe
+*.sys
+*.cat
+*.bin
+*.dat
+*.PNF
+*.deb
+*.pak
+*.so
+*.o
+*.ko
+*.mod
+*.mod.c
+
+# Build artifacts
+Module.symvers
+modules.order
+.*.cmd
+
+# Large PDFs / ZIPs
+*.pdf
+*.zip
+DriverTools_setup.exe
+dynamic-application-loader_*.pdf
+
+# Extracted directories
+gfspi.inf_amd64_*/
+WinBioPlugIns/
+dal.inf_amd64_*/
+goodix-fp-dump/
+goodix-spi-protocol/
+GProgrammer_Linux_x64_*/
+
+# Temp
+/tmp/
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+
+# Reference design binaries
+new_doc/GR551x_Reference_Design_Rev.1.6/
